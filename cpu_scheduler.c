@@ -1,29 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 
+#define MAX_PROCESSES 100
 #define RAM_SIZE 2048
-#define HIGH_PRIORITY 1
-#define MEDIUM_PRIORITY 2
-#define LOW_PRIORITY 3
-#define HIGH_PRIORITY_QUANTUM 8
-#define MEDIUM_PRIORITY_QUANTUM 8
-#define LOW_PRIORITY_QUANTUM 16
+#define PRIORITY_0_RAM 512
+#define TIME_QUANTUM_2 8
+#define TIME_QUANTUM_3 16
 
-// Process structure
 typedef struct {
-    char process_number[5];
+    char process_number[10];
     int arrival_time;
     int priority;
     int burst_time;
-    int ram_mb;
+    int ram;
     int cpu_rate;
 } Process;
 
-// Queue structure
 typedef struct Node {
-    Process data;
+    Process process;
     struct Node* next;
 } Node;
 
@@ -32,195 +27,230 @@ typedef struct {
     Node* rear;
 } Queue;
 
-// Function prototypes
-Queue* createQueue();
-void enqueue(Queue* queue, Process data);
-Process dequeue(Queue* queue);
-bool isQueueEmpty(Queue* queue);
-bool resourceCheck(Process process);
-void assignProcessToCPU1(Process process);
-void assignProcessToCPU2(Process process);
-void executeProcessOnCPU1(FILE* outputFile);
-void executeProcessOnCPU2(int queueIndex, FILE* outputFile);
-void printQueuedProcesses(FILE* outputFile);
+void initQueue(Queue* q) {
+    q->front = q->rear = NULL;
+}
 
-// Global variables
-Queue* cpu1Queue;
-Queue* cpu2Queues[3]; // 0: high priority, 1: medium priority, 2: low priority
+void enqueue(Queue* q, Process p) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->process = p;
+    newNode->next = NULL;
+    if (q->rear == NULL) {
+        q->front = q->rear = newNode;
+    } else {
+        q->rear->next = newNode;
+        q->rear = newNode;
+    }
+}
 
-int main(int argc, char* argv[]) {
-    // Open input file
-    FILE* inputFile = fopen("input.txt", "r");
-    FILE* outputFile = fopen("output.txt", "w");
+Process dequeue(Queue* q) {
+    if (q->front == NULL) {
+        printf("Queue is empty\n");
+        exit(EXIT_FAILURE);
+    }
+    Node* temp = q->front;
+    Process p = temp->process;
+    q->front = q->front->next;
+    if (q->front == NULL) {
+        q->rear = NULL;
+    }
+    free(temp);
+    return p;
+}
 
-    if (inputFile == NULL || outputFile == NULL) {
-        printf("Error opening input/output file.\n");
-        return 1;
+int isQueueEmpty(Queue* q) {
+    return q->front == NULL;
+}
+
+Queue priority0Queue;
+Queue priority1Queue;
+Queue priority2Queue;
+Queue priority3Queue;
+
+int totalRam = RAM_SIZE;
+int priority0Ram = PRIORITY_0_RAM;
+int otherRam = RAM_SIZE - PRIORITY_0_RAM;
+
+FILE *outputFile;
+
+void readProcesses(const char* filename, Process processes[], int* processCount) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
     }
 
-    // Initialize queues
-    cpu1Queue = createQueue();
-    for (int i = 0; i < 3; i++) {
-        cpu2Queues[i] = createQueue();
+    char line[256];
+    *processCount = 0;
+    while (fgets(line, sizeof(line), file)) {
+        Process p;
+        sscanf(line, "%[^,],%d,%d,%d,%d,%d",
+               p.process_number, &p.arrival_time, &p.priority, &p.burst_time, &p.ram, &p.cpu_rate);
+        processes[(*processCount)++] = p;
     }
+    fclose(file);
+}
 
-    // Read processes from input file and perform scheduling
-    char line[100];
-    while (fgets(line, sizeof(line), inputFile)) {
-        Process process;
-        sscanf(line, "%[^,],%d,%d,%d,%d,%d", process.process_number, &process.arrival_time, &process.priority,
-               &process.burst_time, &process.ram_mb, &process.cpu_rate);
-        
-        if (resourceCheck(process)) {
-            if (process.priority == 0) {
-                assignProcessToCPU1(process);
-            } else {
-                assignProcessToCPU2(process);
+void scheduleProcesses(Process processes[], int processCount) {
+    for (int i = 0; i < processCount; i++) {
+        Process p = processes[i];
+        if (p.priority == 0) {
+            if (p.ram <= priority0Ram) {
+                priority0Ram -= p.ram;
+                fprintf(outputFile, "Process %s is queued to be assigned to CPU-1.\n", p.process_number);
+                enqueue(&priority0Queue, p);
+            }
+        } else {
+            if (p.ram <= otherRam) {
+                otherRam -= p.ram;
+                switch (p.priority) {
+                    case 1:
+                        enqueue(&priority1Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que1 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                    case 2:
+                        enqueue(&priority2Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que2 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                    case 3:
+                        enqueue(&priority3Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que3 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                }
             }
         }
     }
+}
 
-    // Execute processes on CPUs
-    executeProcessOnCPU1(outputFile);
-    for (int i = 0; i < 3; i++) {
-        executeProcessOnCPU2(i, outputFile);
+void sortQueueByBurstTime(Queue* q) {
+    if (isQueueEmpty(q)) return;
+
+    Node* sorted = NULL;
+    while (q->front != NULL) {
+        Node* temp = q->front;
+        q->front = q->front->next;
+
+        if (sorted == NULL || temp->process.burst_time < sorted->process.burst_time) {
+            temp->next = sorted;
+            sorted = temp;
+        } else {
+            Node* current = sorted;
+            while (current->next != NULL && current->next->process.burst_time < temp->process.burst_time) {
+                current = current->next;
+            }
+            temp->next = current->next;
+            current->next = temp;
+        }
     }
-
-    // Print queued processes after all processes are executed
-    printQueuedProcesses(outputFile);
-
-    // Close input and output files
-    fclose(inputFile);
-    fclose(outputFile);
-
-    return 0;
-}
-
-// Create an empty queue
-Queue* createQueue() {
-    Queue* queue = (Queue*)malloc(sizeof(Queue));
-    queue->front = queue->rear = NULL;
-    return queue;
-}
-
-// Enqueue a process to the rear of the queue
-void enqueue(Queue* queue, Process data) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    newNode->data = data;
-    newNode->next = NULL;
-    if (queue->rear == NULL) {
-        queue->front = queue->rear = newNode;
-    } else {
-        queue->rear->next = newNode;
-        queue->rear = newNode;
+    q->front = sorted;
+    q->rear = NULL;
+    Node* current = q->front;
+    while (current && current->next) {
+        current = current->next;
     }
+    q->rear = current;
 }
 
-// Dequeue a process from the front of the queue
-Process dequeue(Queue* queue) {
-    if (queue->front == NULL) {
-        Process emptyProcess = {"", 0, 0, 0, 0, 0};
-        return emptyProcess;
+void roundRobinScheduling(Queue* q, int quantum) {
+    Queue tempQueue;
+    initQueue(&tempQueue);
+    while (!isQueueEmpty(q)) {
+        Process p = dequeue(q);
+        if (p.burst_time > quantum) {
+            p.burst_time -= quantum;
+            fprintf(outputFile, "Process %s run until the defined quantum time and is queued again because the process is not completed.\n", p.process_number);
+            enqueue(&tempQueue, p);
+        } else {
+            fprintf(outputFile, "Process %s is assigned to CPU-2.\n", p.process_number);
+            fprintf(outputFile, "Process %s is completed and terminated.\n", p.process_number);
+        }
     }
-    Node* temp = queue->front;
-    queue->front = queue->front->next;
-    if (queue->front == NULL) {
-        queue->rear = NULL;
-    }
-    Process data = temp->data;
-    free(temp);
-    return data;
-}
-
-// Check if the queue is empty
-bool isQueueEmpty(Queue* queue) {
-    return queue->front == NULL;
-}
-
-// Perform resource check
-bool resourceCheck(Process process) {
-    if (process.priority == 0) {
-        return process.ram_mb <= 512;
-    } else {
-        return process.ram_mb <= RAM_SIZE - 512;
+    while (!isQueueEmpty(&tempQueue)) {
+        enqueue(q, dequeue(&tempQueue));
     }
 }
 
-// Assign process to CPU-1
-// Assign process to CPU-1
-void assignProcessToCPU1(Process process) {
-    printf("CPU-1 que1(priority-0) (FCFS)→%s-\n", process.process_number);
-    enqueue(cpu1Queue, process);
+void dispatchProcesses() {
+    while (!isQueueEmpty(&priority0Queue)) {
+        Process p = dequeue(&priority0Queue);
+        fprintf(outputFile, "Process %s is assigned to CPU-1.\n", p.process_number);
+        fprintf(outputFile, "Process %s is completed and terminated.\n", p.process_number);
+    }
+
+    sortQueueByBurstTime(&priority1Queue);
+    while (!isQueueEmpty(&priority1Queue)) {
+        Process p = dequeue(&priority1Queue);
+        fprintf(outputFile, "Process %s is assigned to CPU-2.\n", p.process_number);
+        fprintf(outputFile, "Process %s is completed and terminated.\n", p.process_number);
+    }
+
+    roundRobinScheduling(&priority2Queue, TIME_QUANTUM_2);
+    while (!isQueueEmpty(&priority2Queue)) {
+        Process p = dequeue(&priority2Queue);
+        fprintf(outputFile, "Process %s is assigned to CPU-2.\n", p.process_number);
+        fprintf(outputFile, "Process %s is completed and terminated.\n", p.process_number);
+    }
+
+    roundRobinScheduling(&priority3Queue, TIME_QUANTUM_3);
+    while (!isQueueEmpty(&priority3Queue)) {
+        Process p = dequeue(&priority3Queue);
+        fprintf(outputFile, "Process %s is assigned to CPU-2.\n", p.process_number);
+        fprintf(outputFile, "Process %s is completed and terminated.\n", p.process_number);
+    }
 }
 
-// Assign process to CPU-2
-void assignProcessToCPU2(Process process) {
-    printf("CPU-2 que%d(priority-%d) (", process.priority + 2, process.priority + 1);
-    if (process.priority == 0) {
-        printf("SJF)→%s-", process.process_number);
-    } else {
-        printf("RR-q%d)→%s-", (process.priority == 1) ? HIGH_PRIORITY_QUANTUM : LOW_PRIORITY_QUANTUM, process.process_number);
+void printQueue(Queue* q) {
+    Node* current = q->front;
+    while (current != NULL) {
+        printf("%s", current->process.process_number);
+        current = current->next;
+        if (current != NULL) printf("-");
     }
-    enqueue(cpu2Queues[process.priority], process);
     printf("\n");
 }
 
+void printQueues() {
+    printf("CPU-1 que1(priority-0) (FCFS)→");
+    printQueue(&priority0Queue);
 
+    printf("CPU-2 que2(priority-1) (SJF)→");
+    printQueue(&priority1Queue);
 
-// Execute process on CPU-1 (FCFS)
-void executeProcessOnCPU1(FILE* outputFile) {
-    while (!isQueueEmpty(cpu1Queue)) {
-        Process process = dequeue(cpu1Queue);
-        fprintf(outputFile, "Process %s is queued to be assigned to CPU-1.\n", process.process_number);
-        fprintf(outputFile, "Process %s is assigned to CPU-1.\n", process.process_number);
-        fprintf(outputFile, "Process %s is completed and terminated.\n\n", process.process_number);
-    }
+    printf("CPU-2 que3(priority-2) (RR-q8)→");
+    printQueue(&priority2Queue);
+
+    printf("CPU-2 que4(priority-3) (RR-q16)→");
+    printQueue(&priority3Queue);
 }
 
-// Execute process on CPU-2
-void executeProcessOnCPU2(int queueIndex, FILE* outputFile) {
-    while (!isQueueEmpty(cpu2Queues[queueIndex])) {
-        Process process = dequeue(cpu2Queues[queueIndex]);
-        fprintf(outputFile, "Process %s is placed in the que%d queue to be assigned to CPU-2.\n", process.process_number, queueIndex + 2);
-        fprintf(outputFile, "Process %s is assigned to CPU-2.\n", process.process_number);
-        if (process.burst_time <= ((queueIndex == 0) ? HIGH_PRIORITY_QUANTUM : LOW_PRIORITY_QUANTUM)) {
-            fprintf(outputFile, "The operation of process %s is completed and terminated.\n\n", process.process_number);
-        } else {
-            fprintf(outputFile, "Process %s run until the defined quantum time and is queued again because the process is not completed.\n", process.process_number);
-            process.burst_time -= ((queueIndex == 0) ? HIGH_PRIORITY_QUANTUM : LOW_PRIORITY_QUANTUM);
-            enqueue(cpu2Queues[queueIndex], process);
-            fprintf(outputFile, "Process %s is assigned to CPU-2, its operation is completed and terminated.\n\n", process.process_number);
-        }
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        exit(EXIT_FAILURE);
     }
+
+    Process processes[MAX_PROCESSES];
+    int processCount;
+
+    initQueue(&priority0Queue);
+    initQueue(&priority1Queue);
+    initQueue(&priority2Queue);
+    initQueue(&priority3Queue);
+
+    readProcesses(argv[1], processes, &processCount);
+
+    outputFile = fopen("output.txt", "w");
+    if (outputFile == NULL) {
+        perror("Failed to open output file");
+        exit(EXIT_FAILURE);
+    }
+
+    scheduleProcesses(processes, processCount);
+    dispatchProcesses();
+
+    fclose(outputFile);
+
+    printQueues();
+
+    return 0;
 }
-
-// Print queued processes
-// Print queued processes
-void printQueuedProcesses(FILE* outputFile) {
-    fprintf(outputFile, "CPU-1 que1(priority-0) (FCFS)→");
-    Queue* currentQueue = cpu1Queue;
-    while (!isQueueEmpty(currentQueue)) {
-        Process process = dequeue(currentQueue);
-        fprintf(outputFile, "%s-", process.process_number);
-        enqueue(currentQueue, process); // Add the process back to the queue
-    }
-    fprintf(outputFile, "\n");
-
-    // Print CPU-2 queues
-    for (int i = 0; i < 3; i++) {
-        fprintf(outputFile, "CPU-2 que%d(priority-%d) (", i + 2, i + 1);
-        if (i == 0) {
-            fprintf(outputFile, "SJF)→");
-        } else {
-            fprintf(outputFile, "RR-q%d)→", (i == 1) ? HIGH_PRIORITY_QUANTUM : LOW_PRIORITY_QUANTUM);
-        }
-        currentQueue = cpu2Queues[i];
-        while (!isQueueEmpty(currentQueue)) {
-            Process process = dequeue(currentQueue);
-            fprintf(outputFile, "%s-", process.process_number);
-            enqueue(currentQueue, process); // Add the process back to the queue
-        }
-        fprintf(outputFile, "\n");
-    }
-}
-
