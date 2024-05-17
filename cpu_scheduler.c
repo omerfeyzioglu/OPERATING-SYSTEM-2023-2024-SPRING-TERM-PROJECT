@@ -8,6 +8,7 @@
 #define TIME_QUANTUM_2 8
 #define TIME_QUANTUM_3 16
 
+//nnnn
 typedef struct {
     char process_number[10];
     int arrival_time;
