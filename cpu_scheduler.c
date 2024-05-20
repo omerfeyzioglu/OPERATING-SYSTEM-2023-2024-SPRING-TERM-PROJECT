@@ -91,37 +91,6 @@ void readProcesses(const char* filename, Process processes[], int* processCount)
     fclose(file);
 }
 
-void scheduleProcesses(Process processes[], int processCount) {
-    for (int i = 0; i < processCount; i++) {
-        Process p = processes[i];
-        if (p.priority == 0) {
-            if (p.ram <= priority0Ram) {
-                priority0Ram -= p.ram;
-                fprintf(outputFile, "Process %s is queued to be assigned to CPU-1.\n", p.process_number);
-                enqueue(&priority0Queue, p);
-            }
-        } else {
-            if (p.ram <= otherRam) {
-                otherRam -= p.ram;
-                switch (p.priority) {
-                    case 1:
-                        enqueue(&priority1Queue, p);
-                        fprintf(outputFile, "Process %s is placed in the que1 queue to be assigned to CPU-2.\n", p.process_number);
-                        break;
-                    case 2:
-                        enqueue(&priority2Queue, p);
-                        fprintf(outputFile, "Process %s is placed in the que2 queue to be assigned to CPU-2.\n", p.process_number);
-                        break;
-                    case 3:
-                        enqueue(&priority3Queue, p);
-                        fprintf(outputFile, "Process %s is placed in the que3 queue to be assigned to CPU-2.\n", p.process_number);
-                        break;
-                }
-            }
-        }
-    }
-}
-
 void sortQueueByBurstTime(Queue* q) {
     if (isQueueEmpty(q)) return;
 
@@ -221,6 +190,37 @@ void printQueues() {
 
     printf("CPU-2 que4(priority-3) (RR-q16)→");
     printQueue(&priority3Queue);
+}
+
+void scheduleProcesses(Process processes[], int processCount) {
+    for (int i = 0; i < processCount; i++) {
+        Process p = processes[i];
+        if (p.priority == 0) {
+            if (p.ram <= priority0Ram) {
+                priority0Ram -= p.ram;
+                fprintf(outputFile, "Process %s is queued to be assigned to CPU-1.\n", p.process_number);
+                enqueue(&priority0Queue, p);
+            }
+        } else {
+            if (p.ram <= otherRam) {
+                otherRam -= p.ram;
+                switch (p.priority) {
+                    case 1:
+                        enqueue(&priority1Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que2 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                    case 2:
+                        enqueue(&priority2Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que3 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                    case 3:
+                        enqueue(&priority3Queue, p);
+                        fprintf(outputFile, "Process %s is placed in the que4 queue to be assigned to CPU-2.\n", p.process_number);
+                        break;
+                }
+            }
+        }
+    }
 }
 
 int main(int argc, char* argv[]) {
