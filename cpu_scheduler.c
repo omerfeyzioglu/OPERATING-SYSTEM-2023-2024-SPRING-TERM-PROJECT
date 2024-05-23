@@ -228,3 +228,9 @@ int is_queue_empty(Queue *queue) {
 }
 
 
+int check_resources(int current_ram_usage, int ram_required, int cpu_usage, int cpu_required) {
+    if (current_ram_usage + ram_required <= MEM_SIZE) {
+        return 1;
+    }
+    return 0;
+}
