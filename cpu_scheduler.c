@@ -3,32 +3,32 @@
 #include <limits.h>
 #include <string.h>
 
-// Constants for system parameters
-#define RESERVE_MEM_FOR_PRIORITY_ZERO 512
-#define QUEUE_CAP 50
-#define MEM_SIZE 2048
-#define RR_QUANTUM_LOW 16
-#define PRIORITY_HIGH 1
-#define PRIORITY_MED 2
-#define PRIORITY_LOW 3
-#define PRIORITY_ZERO 0
-#define RR_QUANTUM_MED 8
-#define MAX_PROCS 100
+// System parameter constants
+#define RESERVE_MEM_FOR_PRIORITY_ZERO 512 // Reserved memory for priority zero processes (MB)
+#define QUEUE_CAP 50                      // Maximum capacity of the queue
+#define MEM_SIZE 2048                     // Total memory size (MB)
+#define RR_QUANTUM_LOW 16                 // Round Robin quantum for low priority (ms)
+#define PRIORITY_HIGH 1                   // High priority level
+#define PRIORITY_MED 2                    // Medium priority level
+#define PRIORITY_LOW 3                    // Low priority level
+#define PRIORITY_ZERO 0                   // Priority zero level
+#define RR_QUANTUM_MED 8                  // Round Robin quantum for medium priority (ms)
+#define MAX_PROCS 100                     // Maximum number of processes
 
 // Structure to represent a process
 typedef struct {
-    char id[5];
-    int ram;
-    int priority;
-    int arrival;
-    int burst;
-    int cpu;
+    char id[5];   // Process ID
+    int ram;      // RAM required by the process (MB)
+    int priority; // Priority level of the process
+    int arrival;  // Arrival time of the process (ms)
+    int burst;    // Burst time of the process (ms)
+    int cpu;      // CPU usage of the process
 } Proc;
 
 // Structure to represent a queue of processes
 typedef struct {
-    Proc *elements[QUEUE_CAP];
-    int head, tail;
+    Proc *elements[QUEUE_CAP]; // Array to hold the processes
+    int head, tail;            // Head and tail pointers for the queue
 } Queue;
 
 // Function prototypes
@@ -42,7 +42,7 @@ int check_resources(int current_ram_usage, int ram_required, int cpu_usage, int 
 
 // Main function
 int main(int argc, char *argv[]) {
-    // Check for correct command line argument
+    // Check if the correct number of arguments is provided
     if (argc != 2) {
         printf("Usage: %s <input_file>\n", argv[0]);
         return 1;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     FILE *input = fopen(argv[1], "r");
     FILE *output = fopen("output.txt", "w");
 
-    // Check if files were opened successfully
+    // Check if the files opened successfully
     if (input == NULL || output == NULL) {
         printf("Error opening files!\n");
         return 1;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
         proc_count++;
     }
 
-    // Close input file
+    // Close the input file
     fclose(input);
 
     // Schedule processes using different algorithms
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     schedule_rr(procs, proc_count, RR_QUANTUM_MED, PRIORITY_MED, output);
     schedule_rr(procs, proc_count, RR_QUANTUM_LOW, PRIORITY_LOW, output);
 
-    // Close output file
+    // Close the output file
     fclose(output);
 
     // Print CPU queues for each priority level
@@ -166,7 +166,7 @@ void schedule_sjf(Proc *procs, int count, FILE *out) {
             }
         }
 
-               if (shortest_idx != -1) {
+        if (shortest_idx != -1) {
             Proc *current = cpu2_queue.elements[shortest_idx];
             fprintf(out, "Process %s is assigned to CPU-2.\n", current->id);
             time += current->burst;
@@ -215,7 +215,7 @@ void schedule_rr(Proc *procs, int count, int quantum, int priority, FILE *out) {
     }
 }
 
-// Enqueue a process into a queue
+// Add a process to a queue
 void enqueue(Queue *queue, Proc *proc) {
     if (queue->tail == QUEUE_CAP - 1) {
         printf("Queue overflow!\n");
@@ -225,7 +225,7 @@ void enqueue(Queue *queue, Proc *proc) {
     queue->elements[queue->tail] = proc;
 }
 
-// Dequeue a process from a queue
+// Remove a process from a queue
 Proc *dequeue(Queue *queue) {
     if (is_queue_empty(queue)) {
         printf("Queue underflow!\n");
@@ -236,12 +236,12 @@ Proc *dequeue(Queue *queue) {
     return proc;
 }
 
-// Check if a queue is empty
+// Check if the queue is empty
 int is_queue_empty(Queue *queue) {
     return (queue->head > queue->tail);
 }
 
-// Check if resources are available for a process
+// Check if there are enough resources for a process
 int check_resources(int current_ram_usage, int ram_required, int cpu_usage, int cpu_required) {
     if (current_ram_usage + ram_required <= MEM_SIZE) {
         return 1;
