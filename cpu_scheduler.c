@@ -136,3 +136,95 @@ void schedule_fcfs(Proc *procs, int count, FILE *out) {
         fprintf(out, "Process %s is completed and terminated.\n", current->id);
     }
 }
+void schedule_sjf(Proc *procs, int count, FILE *out) {
+    Queue cpu2_queue = { .head = 0, .tail = -1 };
+    int time = 0;
+    int current_ram_usage = 0;
+
+    for (int i = 0; i < count; i++) {
+        if (procs[i].priority == PRIORITY_HIGH && check_resources(current_ram_usage, procs[i].ram, procs[i].cpu, procs[i].burst)) {
+            current_ram_usage += procs[i].ram;
+            fprintf(out, "Process %s is placed in the que1 queue to be assigned to CPU-2.\n", procs[i].id);
+            enqueue(&cpu2_queue, &procs[i]);
+        }
+    }
+
+    while (!is_queue_empty(&cpu2_queue)) {
+        int shortest_idx = -1;
+        int shortest_burst = INT_MAX;
+        for (int i = cpu2_queue.head; i <= cpu2_queue.tail; i++) {
+            if (cpu2_queue.elements[i]->burst < shortest_burst) {
+                shortest_burst = cpu2_queue.elements[i]->burst;
+                shortest_idx = i;
+            }
+        }
+
+        if (shortest_idx != -1) {
+            Proc *current = cpu2_queue.elements[shortest_idx];
+            fprintf(out, "Process %s is assigned to CPU-2.\n", current->id);
+            time += current->burst;
+            fprintf(out, "The operation of process %s is completed and terminated.\n", current->id);
+ for (int i = shortest_idx; i < cpu2_queue.tail; i++) {
+                cpu2_queue.elements[i] = cpu2_queue.elements[i + 1];
+            }
+            cpu2_queue.tail--;
+        }
+    }
+}
+
+
+
+void schedule_rr(Proc *procs, int count, int quantum, int priority, FILE *out) {
+    Queue cpu2_queue = { .head = 0, .tail = -1 };
+    int time = 0;
+    int current_ram_usage = 0;
+
+    for (int i = 0; i < count; i++) {
+        if (procs[i].priority == priority && check_resources(current_ram_usage, procs[i].ram, procs[i].cpu, procs[i].burst)) {            current_ram_usage += procs[i].ram;
+            fprintf(out, "Process %s is placed in the que%d queue to be assigned to CPU-2.\n", procs[i].id, priority);
+            enqueue(&cpu2_queue, &procs[i]);
+        }
+    }
+
+    while (!is_queue_empty(&cpu2_queue)) {
+        Proc *current = dequeue(&cpu2_queue);
+        fprintf(out, "Process %s is assigned to CPU-2.\n", current->id);
+
+        if (current->burst > quantum) {
+            time += quantum;
+            current->burst -= quantum;
+            fprintf(out, "Process %s run until the defined quantum time and is queued again because the process is not completed.\n", current->id);
+            enqueue(&cpu2_queue, current);
+ } else {
+            time += current->burst;
+            fprintf(out, "Process %s is assigned to CPU-2, its operation is completed and terminated.\n", current->id);
+        }
+    }
+}
+
+void enqueue(Queue *queue, Proc *proc) {
+    if (queue->tail == QUEUE_CAP - 1) {
+        printf("Queue overflow!\n");
+        return;
+    }
+    queue->tail++;
+    queue->elements[queue->tail] = proc;
+}
+
+
+Proc *dequeue(Queue *queue) {
+    if (is_queue_empty(queue)) {
+        printf("Queue underflow!\n");
+        return NULL;
+    }
+    Proc *proc = queue->elements[queue->head];
+    queue->head++;
+    return proc;
+}
+
+
+int is_queue_empty(Queue *queue) {
+    return (queue->head > queue->tail);
+}
+
+
