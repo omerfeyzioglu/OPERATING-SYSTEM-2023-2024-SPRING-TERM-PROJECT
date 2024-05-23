@@ -25,29 +25,29 @@ Process P18 is assigned to CPU-1.
 Process P18 is completed and terminated.
 Process P20 is assigned to CPU-1.
 Process P20 is completed and terminated.
-Process P1 is placed in the que1 queue to be assigned to CPU-2.
-Process P14 is placed in the que1 queue to be assigned to CPU-2.
-Process P15 is placed in the que1 queue to be assigned to CPU-2.
+Process P1 is placed in the queue to be assigned to CPU-2.
+Process P14 is placed in the queue to be assigned to CPU-2.
+Process P15 is placed in the queue to be assigned to CPU-2.
 Process P1 is assigned to CPU-2.
 The operation of process P1 is completed and terminated.
 Process P14 is assigned to CPU-2.
 The operation of process P14 is completed and terminated.
 Process P15 is assigned to CPU-2.
 The operation of process P15 is completed and terminated.
-Process P5 is placed in the que2 queue to be assigned to CPU-2.
-Process P6 is placed in the que2 queue to be assigned to CPU-2.
-Process P23 is placed in the que2 queue to be assigned to CPU-2.
+Process P5 is placed in the queue to be assigned to CPU-2.
+Process P6 is placed in the queue to be assigned to CPU-2.
+Process P23 is placed in the queue to be assigned to CPU-2.
 Process P5 is assigned to CPU-2.
 Process P5 is assigned to CPU-2, its operation is completed and terminated.
 Process P6 is assigned to CPU-2.
 Process P6 is assigned to CPU-2, its operation is completed and terminated.
 Process P23 is assigned to CPU-2.
 Process P23 is assigned to CPU-2, its operation is completed and terminated.
-Process P3 is placed in the que3 queue to be assigned to CPU-2.
-Process P12 is placed in the que3 queue to be assigned to CPU-2.
-Process P13 is placed in the que3 queue to be assigned to CPU-2.
-Process P21 is placed in the que3 queue to be assigned to CPU-2.
-Process P22 is placed in the que3 queue to be assigned to CPU-2.
+Process P3 is placed in the queue to be assigned to CPU-2.
+Process P12 is placed in the queue to be assigned to CPU-2.
+Process P13 is placed in the queue to be assigned to CPU-2.
+Process P21 is placed in the queue to be assigned to CPU-2.
+Process P22 is placed in the queue to be assigned to CPU-2.
 Process P3 is assigned to CPU-2.
 Process P3 is assigned to CPU-2, its operation is completed and terminated.
 Process P12 is assigned to CPU-2.
