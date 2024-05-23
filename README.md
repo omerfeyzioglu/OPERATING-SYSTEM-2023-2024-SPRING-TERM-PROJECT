@@ -1,4 +1,4 @@
-## PROJECT DESCRIPTION
+# PROJECT DESCRIPTION
 
 This project is a simulation of an operating system task scheduler. It manages processes with different priorities using various scheduling algorithms like First-Come, First-Served (FCFS), Shortest Job First (SJF), and Round Robin (RR).
 
