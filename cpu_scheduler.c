@@ -136,6 +136,8 @@ void schedule_fcfs(Proc *procs, int count, FILE *out) {
         fprintf(out, "Process %s is completed and terminated.\n", current->id);
     }
 }
+
+
 void schedule_sjf(Proc *procs, int count, FILE *out) {
     Queue cpu2_queue = { .head = 0, .tail = -1 };
     int time = 0;
@@ -164,7 +166,8 @@ void schedule_sjf(Proc *procs, int count, FILE *out) {
             fprintf(out, "Process %s is assigned to CPU-2.\n", current->id);
             time += current->burst;
             fprintf(out, "The operation of process %s is completed and terminated.\n", current->id);
- for (int i = shortest_idx; i < cpu2_queue.tail; i++) {
+            
+            for (int i = shortest_idx; i < cpu2_queue.tail; i++) {
                 cpu2_queue.elements[i] = cpu2_queue.elements[i + 1];
             }
             cpu2_queue.tail--;
@@ -195,7 +198,7 @@ void schedule_rr(Proc *procs, int count, int quantum, int priority, FILE *out) {
             current->burst -= quantum;
             fprintf(out, "Process %s run until the defined quantum time and is queued again because the process is not completed.\n", current->id);
             enqueue(&cpu2_queue, current);
- } else {
+        } else {
             time += current->burst;
             fprintf(out, "Process %s is assigned to CPU-2, its operation is completed and terminated.\n", current->id);
         }
@@ -228,9 +231,10 @@ int is_queue_empty(Queue *queue) {
 }
 
 
+
 int check_resources(int current_ram_usage, int ram_required, int cpu_usage, int cpu_required) {
     if (current_ram_usage + ram_required <= MEM_SIZE) {
         return 1;
     }
-    return 0;
+    return 0;
 }
